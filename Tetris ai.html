@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title></title>
+        <style type="text/css">
+        *{
+            padding: 0;
+            margin: 0;
+        }
+        .box{
+            width: 200px;
+            height: 400px;
+            margin: 100px auto;
+            border: 5px solid yellowgreen;
+        }
+        .row{
+            height: 20px;
+            width: 100%;
+        }
+        .row div{
+            width: 18px;
+            height: 18px;
+            border: 1px solid transparent;
+            float: left;
+        }
+         
+        .row .active{
+            background: red;
+            border: 1px solid #ccc;
+        }
+         
+        .row .butte{
+            background: goldenrod;
+            border: 1px solid #FF0000;
+        }
+        .listas div{
+            float:left;
+        }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+                 
+        </div>
+        <button>stop</button>
+        <div class="listas">
+            0
+        </div>
+    </body>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript">
+        var clearline = 0;
+
+        $('button').click(function(){
+            aimark = !aimark
+            // console.log(aimark)
+
+        })
+        var $box = $(".box");
+        var $row = null;
+        var $dataArr = [];
+        var timer = null;
+        var gameRun = true;
+        var config = [
+            [
+                {x:0, y:4},
+                {x:1, y:4},
+                {x:0, y:5},
+                {x:1, y:5}
+            ],
+            [
+                {x:0, y:3},
+                {x:0, y:4},
+                {x:0, y:5},
+                {x:0, y:6}
+            ],
+            [
+                {x:0, y:5},
+                {x:1, y:4},
+                {x:1, y:5},
+                {x:2, y:4}
+            ],
+            [
+                {x:0, y:4},
+                {x:1, y:4},
+                {x:1, y:5},
+                {x:2, y:5}
+            ],
+            [
+                {x:0, y:4},
+                {x:1, y:4},
+                {x:1, y:5},
+                {x:1, y:6}
+            ],
+            [
+                {x:0, y:4},
+                {x:1, y:4},
+                {x:2, y:4},
+                {x:2, y:5}
+            ],
+            [
+                {x:0, y:5},
+                {x:1, y:4},
+                {x:1, y:5},
+                {x:1, y:6}
+            ]
+        ];
+        var $bullet = [    
+            {x:0, y:3},
+            {x:0, y:4},
+            {x:0, y:5},
+            {x:0, y:6}
+        ];
+        var $dowm = [
+        ];
+         
+        for(var i = 0 ; i < 20; i++){
+            $box.append("<div class='row'></div>");
+            var temp = [];
+            for(var j = 0; j < 10; j++){
+                $box.find(".row").last().append("<div></div>");
+                temp.push(0);
+            }
+            $dataArr.push(temp);   
+        }
+        $row = $(".row");
+         
+        dataTemp();
+        function dataTemp(){
+            for(var i = 0; i < 20; i++){
+                for(var j = 0; j < 10; j++){
+                    if($dataArr[i][j] == 1){
+                        $dataArr[i][j] = 0;
+                    }
+                }
+            }
+            for(var i = 0; i < $bullet.length;i++){
+                $dataArr[$bullet[i].x][$bullet[i].y] = 1;    //正在下落的dom    
+            }
+            /*for(var i = 0;i< $dowm.length ;i++ ){
+                $dataArr[$dowm[i].x][$dowm[i].y] = 2;   //已经下来的dom
+            }*/
+            layout();
+        };
+         
+        function layout(){
+            for(var i = 0; i < 20; i++){
+                for(var j = 0; j < 10; j++){
+                    if($dataArr[i][j] == 0){
+                        $row.eq(i).find("div").eq(j)[0].className = "";
+                    }else if($dataArr[i][j] == 1){
+                        $row.eq(i).find("div").eq(j)[0].className = "active";
+                    }else if($dataArr[i][j] == 2){                     
+                        $row.eq(i).find("div").eq(j)[0].className = "butte";
+                    }      
+                }
+            }  
+        };
+         
+         
+        $(window).on("keydown", function(event) {
+                if(gameRun){
+                    switch(event.key) {
+                        case "w":
+                            rotate();
+                            break;
+                        case "s":
+                            moveToDown();
+                            break;
+                        case "a":
+                            leftRight(-1);
+                            break;
+                        case "d":
+                            leftRight(1);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                     
+                 
+            });
+         
+        function rotate(){
+            var tmpBlock = new Array(4);
+            for(var i=0; i<4; i++){
+            tmpBlock[i] = {x:0, y:0};
+            }
+            //先算四个点的中心点，则这四个点围绕中心旋转90度。
+            var cx = Math.round(($bullet[0].x + $bullet[1].x + $bullet[2].x + $bullet[3].x)/4);
+            var cy = Math.round(($bullet[0].y + $bullet[1].y + $bullet[2].y + $bullet[3].y)/4);
+            //旋转的主要算法. 可以这样分解来理解。
+            //先假设围绕源点旋转。然后再加上中心点的坐标。
+            for(var i=0; i<4; i++){
+                tmpBlock[i].x = cx+cy-$bullet[i].y;
+                tmpBlock[i].y = cy-cx+$bullet[i].x;
+            }
+             
+            if(judegBorder(tmpBlock)){
+                for(var i=0; i<4; i++){
+                    $bullet[i].x = tmpBlock[i].x;
+                    $bullet[i].y = tmpBlock[i].y;
+                }
+            }
+             
+             
+             
+            dataTemp();
+             
+        }
+         
+        function move(x){          
+                for(var i = 0; i < $bullet.length; i++ ){
+                    $bullet[i].x = $bullet[i].x + x;
+                }
+                if(! judegBorder($bullet)){
+                    clearInterval(timer);
+                    createSqure();
+                    return;
+                }
+            dataTemp();
+        }
+         
+        var aimark = true
+        function ai(){
+            if(!aimark){
+                return false;
+            }
+
+            //旋转
+            var jilu = {'xuan':0,'mobile':0,'fen':0,'heightmark':0}
+            var jia = []
+            var boxlist = []
+            var marklista = new Array(4);
+            for(var i=0; i<4; i++){
+                marklista[i] = {x:0, y:0};
+            }
+            for(var i=0; i<4; i++){
+                marklista[i].x = $bullet[i].x;
+                marklista[i].y = $bullet[i].y;
+            }              
+            var tmpBlock = new Array(4);
+            for(var i=0; i<4; i++){
+                tmpBlock[i] = {x:0, y:0};
+            }
+            for(var jo=0; jo<4; jo++){
+                if(jo!=0){
+                    for(var i=0; i<4; i++){
+                        marklista[i].x = tmpBlock[i].x;
+                        marklista[i].y = tmpBlock[i].y;
+                    } 
+                }
+                //先算四个点的中心点，则这四个点围绕中心旋转90度。
+                var cx = Math.round((marklista[0].x + marklista[1].x + marklista[2].x + marklista[3].x)/4);
+                var cy = Math.round((marklista[0].y + marklista[1].y + marklista[2].y + marklista[3].y)/4);
+                //旋转的主要算法. 可以这样分解来理解。
+                //先假设围绕源点旋转。然后再加上中心点的坐标。
+                for(var i=0; i<4; i++){
+                    tmpBlock[i].x = cx+cy-marklista[i].y;
+                    tmpBlock[i].y = cy-cx+marklista[i].x;
+                }
+                 
+                if(judegBorder(tmpBlock)){
+                        for(var l=0; l<=10; l++){
+                            jia = []
+                            var boundaryMark = false
+                            var mark = new Array(4);   
+                            for(var i=0; i<4; i++){
+                                mark[i] = {x:0, y:0};
+                                mark[i].x = tmpBlock[i].x;
+                                mark[i].y = tmpBlock[i].y;
+                            } 
+
+
+                            for(var iq=0;iq<$dataArr.length;iq++){
+                                var temp = [];
+                                for(var jb=0;jb<$dataArr[iq].length;jb++){
+                                    temp.push($dataArr[iq][jb])
+                                }
+                                jia.push(temp)
+                            }
+                            if(l<=5){
+                                for(var ie = 0; ie < mark.length; ie++ ){
+                                    mark[ie].y = mark[ie].y + l;  
+                                    if(!judegBorder(mark)){
+                                        for(var iea = 0; iea < mark.length; iea++ ){              
+                                            mark[iea] = {x:tmpBlock[iea].x, y:tmpBlock[iea].y};   
+                                            boundaryMark = true;                           
+                                        }
+                                    }          
+                                }   
+                                if(boundaryMark){
+                                    continue;
+                                }
+                                
+                                for(var a=0;a<20;a++){
+                                    for(var ia = 0; ia < mark.length; ia++ ){
+                                        mark[ia].x = mark[ia].x+1; 
+                                    }
+                                    if(!judegBorder(mark)){                                        
+                                        var fen = 0;
+                                        var original = 0;
+                                        var now = 0;
+                                        var heightmark = 20
+                                        for(var lie = 0;lie<10;lie++){
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2){
+                                                    for(var empty=hang+1;empty<20;empty++){
+                                                        if(jia[empty][lie]==0){
+                                                            original+=1
+                                                        }
+                                                    }
+                                                    break;
+                                                }
+
+                                            }
+                                        }
+                                        jilu['fen'] = -original
+                                        // 消除
+                                        var obja = [];
+                                        //记录停下的
+                                        for(var ib = 0; ib< 4; ib++){
+                                            obja.push({x:mark[ib].x-1,y:mark[ib].y});
+                                            jia[mark[ib].x-1][mark[ib].y] = 2;
+                                            if(mark[ib].x<=heightmark){
+                                                heightmark = mark[ib].x;
+                                            }
+                                             if(mark[ib].x<=7){
+                                                fen-=40
+                                            }
+                                            if(jia[mark[ib].x-1][mark[ib].y+1]==0||jia[mark[ib].x-1][mark[ib].y-1]==0){
+                                                fen--;
+                                            }
+                                        } 
+                                        for(var ic = 0; ic < obja.length;ic++){
+                                            var flaga = true;
+                                             
+                                            for(var ja = 0; ja < 10; ja++){
+                                                if(jia[obja[ic].x][ja] != 2){
+                                                    flaga = false;
+                                                }
+                                            }
+                                            if(flaga){
+                                                fen+=2
+                                                for(var j = 0; j < 10; j++){
+                                                    jia[obja[ic].x][j] = 0;
+                                                }
+                                                //下面的被消除，往下掉
+                                                for(var x = obja[ic].x ; x >= 0 ; x--){
+                                                    for(var y = 0; y < 10;y++){
+                                                        if(jia[x][y] == 2){
+                                                            jia[x][y] = 0;
+                                                            jia[x+1][y] = 2;
+                                                        }
+                                                    }
+                                                }
+                                                ic--;
+                                            }  
+                                        }
+                                        // console.log(jia)
+                                        // 空洞
+                                        var Highest = 20
+                                        var minimum = 0;
+                                        for(var lie = 0;lie<10;lie++){
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2){
+                                                    for(var empty=hang+1;empty<20;empty++){
+                                                        if(jia[empty][lie]==0){
+                                                            now+=7
+                                                        }
+                                                    }
+                                                    break;
+                                                }
+
+                                            }
+                                        }
+                                        for(var lie = 0;lie<10;lie++){
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2&&hang<=Highest){
+                                                    Highest = hang
+                                                    break;
+                                                }
+
+                                            }
+                                        }
+                                        for(var lie = 0;lie<10;lie++){
+                                            var minimumMark = true
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2){
+                                                    minimumMark = false
+                                                    if(hang>=minimum){
+                                                        minimum = hang
+                                                        break;
+                                                    }                                                    
+                                                }
+                                                if(minimumMark&&hang==19){
+                                                    minimum=19
+                                                }
+
+                                            }
+                                        }
+                                        var Differ = minimum - Highest 
+                                        // console.log(Differ)
+                                        fen = fen - now + original - Differ
+                                        // fen +=10
+                                        var jilulist = [];
+                                        jilu['fen']= fen
+                                        jilu['xuan']= jo
+                                        jilu['mobile'] = l
+                                        jilu['heightmark'] = heightmark
+                                        for(x in jilu){
+                                            jilulist.push(jilu[x])
+                                        }
+                                        boxlist.push(jilulist)
+                                        // console.log(jilu)
+                                        break 
+                                    }
+                                }
+                                
+
+                            }else{
+                                var numbera = -(l-5);
+                                for(var i = 0; i < mark.length; i++ ){
+                                    mark[i].y = mark[i].y + numbera;  
+                                    if(!judegBorder(mark)){
+                                        for(var i = 0; i < mark.length; i++ ){              
+                                            mark[i] = {x:tmpBlock[i].x, y:tmpBlock[i].y};   
+                                            boundaryMark = true                                   
+                                        }
+                                    }          
+                                }   
+                                if(boundaryMark){
+                                    continue;
+                                }
+                               
+                                for(var a=0;a<20;a++){
+                                    for(var ia = 0; ia < mark.length; ia++ ){
+                                        mark[ia].x = mark[ia].x+1; 
+                                    }
+                                    if(!judegBorder(mark)){                                        
+                                        var fen = 0;
+                                        var original = 0;
+                                        var now = 0;
+                                        var heightmark = 20
+                                        for(var lie = 0;lie<10;lie++){
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2){
+                                                    for(var empty=hang+1;empty<20;empty++){
+                                                        if(jia[empty][lie]==0){
+                                                            original+=1
+                                                        }
+                                                    }
+                                                    break;
+                                                }
+
+                                            }
+                                        }
+
+                                        jilu['fen'] = -original
+                                        // 消除
+                                        var obja = [];
+                                        //记录停下的
+                                        for(var ib = 0; ib< 4; ib++){
+                                            obja.push({x:mark[ib].x-1,y:mark[ib].y});
+                                            jia[mark[ib].x-1][mark[ib].y] = 2;
+                                            if(mark[ib].x<=heightmark){
+                                                heightmark = mark[ib].x;
+                                            }
+                                            if(mark[ib].x<=7){
+                                                fen-=40
+                                            }
+                                            if(jia[mark[ib].x-1][mark[ib].y+1]==0||jia[mark[ib].x-1][mark[ib].y-1]==0){
+                                                fen--;
+                                            }
+                                        } 
+                                        for(var ic = 0; ic < obja.length;ic++){
+                                            var flaga = true;
+                                            for(var ja = 0; ja < 10; ja++){
+                                                if(jia[obja[ic].x][ja] != 2){
+                                                    flaga = false;
+                                                }
+                                            }
+                                            if(flaga){
+                                                fen+=2
+                                                for(var j = 0; j < 10; j++){
+                                                    jia[obja[ic].x][j] = 0;
+                                                }
+                                                //下面的被消除，往下掉
+                                                for(var x = obja[ic].x ; x >= 0 ; x--){
+                                                    for(var y = 0; y < 10;y++){
+                                                        if(jia[x][y] == 2){
+                                                            jia[x][y] = 0;
+                                                            jia[x+1][y] = 2;
+                                                        }
+                                                    }
+                                                }
+                                                ic--;
+                                            }  
+                                        }
+                                        // console.log(jia)
+                                        // 空洞
+                                        var Highest = 20
+                                        var minimum = 0;
+                                        for(var lie = 0;lie<10;lie++){
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2){
+                                                    for(var empty=hang+1;empty<20;empty++){
+                                                        if(jia[empty][lie]==0){
+                                                            now+=7
+                                                        }
+                                                    }
+                                                    break;
+                                                }
+
+                                            }
+                                        }
+                                        for(var lie = 0;lie<10;lie++){
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2&&hang<=Highest){
+                                                    Highest = hang
+                                                    break;
+                                                }
+
+                                            }
+                                        }
+                                        for(var lie = 0;lie<10;lie++){
+                                            var minimumMark = true
+                                            for(var hang=0;hang<20;hang++){
+                                                if(jia[hang][lie]==2){
+                                                    minimumMark = false
+                                                    if(hang>=minimum){
+                                                        minimum = hang
+                                                        break;
+                                                    }                                                    
+                                                }
+                                                if(minimumMark&&hang==19){
+                                                    minimum=19
+                                                }
+
+                                            }
+                                        }
+                                        var Differ = minimum - Highest 
+
+                                        fen = fen - now + original - Differ
+                                        // fen +=10
+                                        var jilulist = [];
+                                        jilu['fen']= fen
+                                        jilu['xuan']= jo
+                                        jilu['mobile'] = l
+                                        jilu['heightmark'] = heightmark
+                                        for(x in jilu){
+                                            jilulist.push(jilu[x])
+                                        }
+                                        // console.log(jilu)
+                                        boxlist.push(jilulist)
+                                        break 
+                                }
+                            }
+
+                        }                           
+
+                    }                            
+                }
+            }   
+            for(var wa=0;wa<boxlist.length;wa++){ 
+                for(var wb=0;wb<boxlist.length;wb++){
+                    if(boxlist[wa]['2']<boxlist[wb]['2']){
+                        var kon = boxlist[wa]
+                        boxlist[wa] = boxlist[wb]
+                        boxlist[wb] = kon
+                    }
+                }
+                
+                
+            }
+            for(var wa=0;wa<boxlist.length;wa++){ 
+                if(boxlist[wa][2]==boxlist[boxlist.length-1][2]){
+                    if(boxlist[wa][3]>boxlist[boxlist.length-1][3]){
+                        var kon = boxlist[wa]
+                        boxlist[wa] = boxlist[boxlist.length-1]
+                        boxlist[boxlist.length-1] = kon
+                    }
+                }
+            } 
+            // console.log(boxlist[boxlist.length-1])
+            // console.log(boxlist.length)
+            // console.log(boxlist)
+            var lastlist = boxlist[boxlist.length-1]
+                for(var s=0;s<=lastlist[0];s++){
+                    rotate()
+                }
+            
+            var leftmark = 1
+            if(lastlist[1]<=5){
+                leftmark = 1
+            }else{
+                leftmark = -1
+                lastlist[1] = lastlist[1]-5
+            }
+            for(var l=0;l<lastlist[1];l++){
+                leftRight(leftmark)
+            }
+            // for(var df=0;df<18;df++){
+            //     moveToDown()
+            // }
+            
+        }
+        var dfmark = true;
+        //判断是否越界，越界了，则返回false
+        function judegBorder(obj){
+            var flag = true;
+            for(var i = 0; i < obj.length ; i++){
+                 
+                if(obj[i].x >= 20 || obj[i].x < 0 || obj[i].y >= 10 || obj[i].y < 0){
+                    flag = false;
+                    return false;
+                }
+                 
+                if($dataArr[obj[i].x][obj[i].y] == 2){
+                    flag = false;
+                    return false;
+                }
+            }
+            return flag;
+        }
+         
+        timer=setInterval(function(){
+            move(1);
+            // ai()
+        },100);
+        
+         
+        function createSqure(){
+             
+            var obj = [];
+            //记录停下的
+            for(var i = 0; i < 4; i++){
+                obj.push({x:$bullet[i].x-1,y:$bullet[i].y});
+                $dataArr[$bullet[i].x-1][$bullet[i].y] = 2;
+            }      
+            //消除可以消除的
+            trimp(obj);
+            layout();
+        var randNum =Math.floor(Math.random() * config.length);
+            //判断是否到顶,没有则添加
+            for(var i=0; i<4; i++){ 
+                if($dataArr[config[randNum][i].x][config[randNum][i].y] == 2){
+                    gameRun = false;
+                    alert("Game Over!");
+                    return;
+                }
+                $bullet[i] = {x:config[randNum][i].x, y:config[randNum][i].y};
+                 
+            }
+            setTimeout(function(){
+                ai()
+            },250)
+            
+            dataTemp();
+            timer=setInterval(function(){
+                move(1);
+                // ai()
+            },100);
+        }
+         
+         
+         
+        function leftRight(num){
+            var tmpBlock = new Array(4);
+                for(var i=0; i<4; i++){
+                    tmpBlock[i] = {x:$bullet[i].x, y:$bullet[i].y};
+                }
+            for(var i = 0; i < tmpBlock.length; i++ ){
+                    tmpBlock[i].y = tmpBlock[i].y + num;           
+                }
+            if(judegBorder(tmpBlock)){
+                for(var i = 0; i < tmpBlock.length; i++ ){              
+                    $bullet[i].y = tmpBlock[i].y;                                      
+                }
+            }
+            dataTemp();
+        }
+         
+         
+        function moveToDown(){
+            var tmpBlock = new Array(4);
+                for(var i=0; i<4; i++){
+                    tmpBlock[i] = {x:$bullet[i].x, y:$bullet[i].y};
+                }
+            for(var i = 0; i < tmpBlock.length; i++ ){
+                    tmpBlock[i].x = tmpBlock[i].x + 1;             
+                }
+            if(judegBorder(tmpBlock)){
+                for(var i = 0; i < tmpBlock.length; i++ ){              
+                    $bullet[i].x = tmpBlock[i].x;                                      
+                }
+            }
+            dataTemp();
+        }
+         
+        function trimp(obj){
+            for(var i = 0; i < obj.length;i++){
+                var flag = true;
+                 
+                for(var j = 0; j < 10; j++){
+                    if($dataArr[obj[i].x][j] != 2){
+                        flag = false;
+                    }
+                }
+                if(flag){
+                    //需要消除
+                    clearline++;
+                    for(var j = 0; j < 10; j++){
+                        $dataArr[obj[i].x][j] = 0;
+                    }
+                    //下面的被消除，往下掉
+                    for(var x = obj[i].x ; x >= 0 ; x--){
+                        for(var y = 0; y < 10;y++){
+                            if($dataArr[x][y] == 2){
+                                $dataArr[x][y] = 0;
+                                $dataArr[x+1][y] = 2;
+                            }
+                        }
+                    }
+                    i--;
+
+                    $('.listas').html(clearline*100)
+                }  
+            }  
+        }
+    </script>
+</html>
